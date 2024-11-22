@@ -1,0 +1,16 @@
+import yfinance as yf
+import pyodbc
+import numpy as np
+
+# Database connection setup
+connection_string = 'Driver={ODBC Driver 18 for SQL Server};Server=localhost;Database=iracing;Trusted_Connection=yes;Encrypt=no'
+
+query = "SELECT NULLIF(1,MAX(pricesID)+1) FROM [iracing].[dbo].[prices]"
+    
+with pyodbc.connect(connection_string) as conn:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        result = cursor.fetchone()
+        pricesID = result[0]  # Get the first column of the result
+
+        print("Processing starting from pricesID " + str(pricesID))

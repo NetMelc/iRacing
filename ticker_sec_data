@@ -1,0 +1,54 @@
+import requests
+import pyodbc
+import json
+
+# Database connection settings
+server = 'your_server_name'  # Replace with your server name
+database = 'iracing'         # Replace with your database name
+username = 'your_username'   # Replace with your username
+password = 'your_password'   # Replace with your password
+table_name = 'dbo.instruments'
+
+json_file_path = "company_tickers.json"
+
+# URL of the JSON file
+url = "https://www.sec.gov/files/company_tickers.json"
+
+try:
+    # Step 1: Load the JSON data from the local file
+    with open(json_file_path, 'r') as file:
+        data = json.load(file)
+
+    # Step 2: Prepare SQL Server connection
+    connection_string = 'Driver={ODBC Driver 18 for SQL Server};Server=localhost;Database=iracing;Trusted_Connection=yes;Encrypt=no'
+    conn = pyodbc.connect(connection_string)
+    cursor = conn.cursor()
+
+    # Step 3: Insert data into the table
+    insert_query = f"""
+    INSERT INTO {table_name} (CIK, Ticker, InstrumentDescription)
+    VALUES (?, ?, ?)
+    """
+    for key, value in data.items():
+        cik = value['cik_str']
+        ticker = value['ticker']
+        title = value['title']
+
+        try:
+            cursor.execute(insert_query, cik, ticker, title)
+        except pyodbc.IntegrityError:
+            print(f"CIK {cik} already exists in the table. Skipping...")
+    
+    conn.commit()
+    print("Data inserted successfully.")
+
+except requests.RequestException as e:
+    print(f"Error fetching JSON data: {e}")
+
+except pyodbc.Error as db_error:
+    print(f"Database error: {db_error}")
+
+finally:
+    # Close the database connection
+    if 'conn' in locals():
+        conn.close()
